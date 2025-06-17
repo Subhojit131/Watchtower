@@ -1,0 +1,14 @@
+repos:
+  - repo: local
+    hooks:
+      - id: dart-format
+        name: Dart Format
+        entry: dart format .
+        language: system
+        pass_filenames: false
+
+      - id: dart-fix
+        name: Dart Fix (apply automatic fixes)
+        entry: bash -c 'dart fix --apply || true'
+        language: system
+        pass_filenames: false
