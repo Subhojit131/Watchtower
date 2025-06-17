@@ -33,7 +33,7 @@ step 4 go to your respective branch ` git checkout _branchname_ `
 
 step 5 install the dependencies required `  flutter pub get `
 
-## Optional Extras They Might Do:
+## Other flutter commands:
 Run the project:` flutter run `
 
 Run tests:` flutter test `
