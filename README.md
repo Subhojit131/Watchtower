@@ -15,7 +15,7 @@ For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
 
-##Instructions for setup 
+###Instructions for setup 
 
 first carry out the usual setup for setting up flutter in your system 
 then clone this repo to you local system then install the pre-commit utility on your system 
