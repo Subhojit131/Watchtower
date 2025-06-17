@@ -25,7 +25,7 @@ that is after you did the above steps
 
 step 1 clone this repo to your local maching `git clone git@github.com:Subhojit131/Watchtower.git`
 
-step 2 go to the directord `cd Watchtower`
+step 2 go to the directory `cd Watchtower`
 
 step 3 run the command `pre-commit install` 
 
