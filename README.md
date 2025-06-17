@@ -29,4 +29,13 @@ step 2 go to the directord `cd Watchtower`
 
 step 3 run the command `pre-commit install` 
 
-step 3 go to your respective branch ` git checkout _branchname_ `
+step 4 go to your respective branch ` git checkout _branchname_ `
+
+step 5 install the dependencies required `  flutter pub get `
+
+## Optional Extras They Might Do:
+Run the project:` flutter run `
+
+Run tests:` flutter test `
+
+Analyze code for issues:` flutter analyze `
