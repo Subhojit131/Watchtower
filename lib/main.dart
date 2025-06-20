@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'screens/scan_link.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() => runApp(const MyApp());
+void main() async {
+  await dotenv.load();
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -8,7 +13,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SafeGuard',
+      title: 'Watch Tower',
       theme: ThemeData.dark().copyWith(
         primaryColor: Colors.deepPurple,
         scaffoldBackgroundColor: const Color(0xFF1E1E2C),
@@ -18,7 +23,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       debugShowCheckedModeBanner: false,
-      home: const MyHomePage(title: 'SafeGuard'),
+      home: const MyHomePage(title: 'Wactch Tower'),
     );
   }
 }
@@ -80,9 +85,16 @@ class FeatureCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Tapped "$label"')));
+        if (label == 'Scan Link') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ScanLinkPage()),
+          );
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Tapped "$label"')));
+        }
       },
       child: Card(
         elevation: 4,
