@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/scan_link.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'screens/contact_search.dart';
 
 void main() async {
   await dotenv.load(fileName: ".env");
@@ -24,6 +25,13 @@ class MyApp extends StatelessWidget {
       ),
       debugShowCheckedModeBanner: false,
       home: const MyHomePage(title: 'Wactch Tower'),
+      routes: {
+        '/scan-link': (context) =>
+            const ScanLinkPage(), // Assuming ScanLinkScreen is the widget for /scan-link
+        '/contact-search': (context) =>
+            const ContactSearchScreen(), // Assuming ContactSearchScreen is the widget for /contact-search
+        // Add other routes as needed
+      },
     );
   }
 }
@@ -86,10 +94,9 @@ class FeatureCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         if (label == 'Scan Link') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ScanLinkPage()),
-          );
+          Navigator.pushNamed(context, '/scan-link');
+        } else if (label == 'Number Checker') {
+          Navigator.pushNamed(context, '/contact-search');
         } else {
           ScaffoldMessenger.of(
             context,
