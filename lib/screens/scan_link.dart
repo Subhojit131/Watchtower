@@ -6,7 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:android_intent_plus/android_intent.dart';
 
 class ScanLinkPage extends StatefulWidget {
-  const ScanLinkPage({super.key});
+  final String? initialUrl;
+
+  const ScanLinkPage({super.key, this.initialUrl});
 
   @override
   State<ScanLinkPage> createState() => _ScanLinkPageState();
@@ -22,8 +24,12 @@ class _ScanLinkPageState extends State<ScanLinkPage> {
   @override
   void initState() {
     super.initState();
-    handleInitialLink();
-    listenToIncomingLinks();
+    if (widget.initialUrl != null) {
+      _urlController.text = widget.initialUrl!;
+      scanLink();
+    } else {
+      listenToIncomingLinks();
+    }
   }
 
   Uri? lastUri;
@@ -97,7 +103,7 @@ class _ScanLinkPageState extends State<ScanLinkPage> {
         isSafe = !isUnsafe;
       });
 
-      // ✅ Optional Chrome redirection
+      //Optional Chrome redirection
       if (!isUnsafe) {
         await Future.delayed(const Duration(seconds: 1));
         await openInChrome(url);
