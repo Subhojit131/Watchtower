@@ -61,7 +61,7 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       debugShowCheckedModeBanner: false,
-      home: const MyHomePage(title: 'Wactch Tower'),
+      home: const MyHomePage(title: 'Watch Tower'),
       routes: {
         '/scan-link': (context) =>
             const ScanLinkPage(), // Assuming ScanLinkScreen is the widget for /scan-link
