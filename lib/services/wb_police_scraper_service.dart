@@ -118,7 +118,7 @@ class WBPoliceScraperService {
   }
 
   /// Loads contacts from a local JSON file.
-  /// Returns a list of contact maps (Map<String, dynamic> now), or an empty list if an error occurs or file doesn't exist.
+  /// Returns a list of contact maps (Map`String, dynamic` now), or an empty list if an error occurs or file doesn't exist.
   /// This now correctly handles 'isScammer' as a boolean.
   Future<List<Map<String, dynamic>>> _loadContactsFromFile() async {
     try {
@@ -145,7 +145,7 @@ class WBPoliceScraperService {
     return []; // Return empty list on error or if file doesn't exist
   }
 
-  /// Saves a list of contacts (now List<Map<String, dynamic>>) to a local JSON file.
+  /// Saves a list of contacts (now List`Map`String, dynamic``) to a local JSON file.
   /// Throws an error if saving fails.
   Future<void> _saveContactsToFile(List<Map<String, dynamic>> contacts) async {
     try {
