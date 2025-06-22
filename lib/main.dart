@@ -1,18 +1,55 @@
 import 'package:flutter/material.dart';
-import 'screens/scan_link.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/contact_search.dart';
+import 'package:app_links/app_links.dart';
+import 'screens/scan_link.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Uri? initialUri;
+  bool isReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkInitialLink();
+  }
+
+  Future<void> _checkInitialLink() async {
+    final appLinks = AppLinks();
+    try {
+      final uri = await appLinks.getInitialLink();
+      setState(() {
+        initialUri = uri;
+        isReady = true;
+      });
+    } catch (e) {
+      setState(() {
+        isReady = true;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!isReady) {
+      return const MaterialApp(
+        home: Scaffold(body: Center(child: CircularProgressIndicator())),
+      );
+    }
+
     return MaterialApp(
       title: 'Watch Tower',
       theme: ThemeData.dark().copyWith(
