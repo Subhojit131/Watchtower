@@ -19,7 +19,7 @@ class WBPoliceScraperService {
     'Accept':
         'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
     'Accept-Language': 'en-US,en;q=0.9',
-    'Connection': 'keep-alive',
+    'Connection': 'keep-alive', // Added to encourage persistent connection
   };
 
   // Field to store cookies obtained from previous responses
@@ -40,18 +40,76 @@ class WBPoliceScraperService {
   }
 
   /// Searches for a contact by phone number in the locally stored contacts.
-  /// Returns a map of contact details if found, otherwise an empty map.
-  Future<Map<String, String>?> searchContact(String phoneNumber) async {
+  /// Returns a map of contact details if found, otherwise null.
+  /// The returned map can now include an 'isScammer' boolean field.
+  Future<Map<String, dynamic>?> searchContact(String phoneNumber) async {
     print('Searching for contact: $phoneNumber');
     final contacts = await _loadContactsFromFile();
     print('Loaded ${contacts.length} contacts from file for search.');
-    // Normalize the input phone number and compare with normalized stored numbers
-    return contacts.firstWhere(
-      (c) => _normalizePhone(
-        c['phone'] ?? '',
-      ).contains(_normalizePhone(phoneNumber)),
-      orElse: () => {}, // Return an empty map if no contact is found
+    final normalizedSearchPhone = _normalizePhone(phoneNumber);
+
+    for (var contact in contacts) {
+      final normalizedContactPhone = _normalizePhone(
+        contact['phone']?.toString() ?? '',
+      );
+      if (normalizedContactPhone.contains(normalizedSearchPhone)) {
+        return contact; // Return the found contact (now Map<String, dynamic>)
+      }
+    }
+    return null; // Return null if no contact is found after checking all contacts
+  }
+
+  /// NEW METHOD: Adds a new contact or updates an existing one in the database.
+  /// Used for flagging numbers as scammers or manually adding new contacts.
+  /// The contactData map should contain at least 'phone' and 'isScammer' fields.
+  Future<void> addOrUpdateContact(Map<String, dynamic> contactData) async {
+    print('Adding or updating contact: ${contactData['phone']}');
+    List<Map<String, dynamic>> contacts =
+        await _loadContactsFromFile(); // Load existing contacts as dynamic maps
+
+    final normalizedNewPhone = _normalizePhone(
+      contactData['phone']?.toString() ?? '',
     );
+    bool found = false;
+
+    // Check if contact already exists by phone number
+    for (int i = 0; i < contacts.length; i++) {
+      final existingNormalizedPhone = _normalizePhone(
+        contacts[i]['phone']?.toString() ?? '',
+      );
+      if (existingNormalizedPhone == normalizedNewPhone) {
+        // Update existing contact with new data (e.g., set isScammer to true)
+        contacts[i].addAll(contactData);
+        found = true;
+        print('Updated existing contact: ${contactData['phone']}');
+        break;
+      }
+    }
+
+    if (!found) {
+      // If not found, add as a new contact
+      contacts.add(contactData);
+      print('Added new contact: ${contactData['phone']}');
+    }
+
+    // Save the updated list back to the file
+    await _saveContactsToFile(contacts);
+  }
+
+  /// Checks if the contacts JSON file exists and contains data.
+  /// Returns true if the file exists and is not empty, false otherwise.
+  Future<bool> contactsExistAndNotEmpty() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/$contactsFileName');
+      if (await file.exists()) {
+        final contents = await file.readAsString();
+        return contents.isNotEmpty; // True if file exists and has content
+      }
+    } catch (e) {
+      print('Error checking if contacts file exists: $e');
+    }
+    return false; // File doesn't exist, is empty, or error occurred
   }
 
   /// Normalizes a phone number by removing all non-digit characters.
@@ -60,8 +118,9 @@ class WBPoliceScraperService {
   }
 
   /// Loads contacts from a local JSON file.
-  /// Returns a list of contact maps, or an empty list if an error occurs or file doesn't exist.
-  Future<List<Map<String, String>>> _loadContactsFromFile() async {
+  /// Returns a list of contact maps (Map<String, dynamic> now), or an empty list if an error occurs or file doesn't exist.
+  /// This now correctly handles 'isScammer' as a boolean.
+  Future<List<Map<String, dynamic>>> _loadContactsFromFile() async {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/$contactsFileName');
@@ -75,8 +134,8 @@ class WBPoliceScraperService {
         }
         final List<dynamic> jsonList = json.decode(contents);
         print('Successfully loaded ${jsonList.length} items from file.');
-        // Convert dynamic list to List<Map<String, String>>
-        return jsonList.map((item) => Map<String, String>.from(item)).toList();
+        // Convert dynamic list to List<Map<String, dynamic>>
+        return jsonList.map((item) => Map<String, dynamic>.from(item)).toList();
       } else {
         print('Contact file does not exist at ${file.path}.');
       }
@@ -86,9 +145,9 @@ class WBPoliceScraperService {
     return []; // Return empty list on error or if file doesn't exist
   }
 
-  /// Saves a list of contacts to a local JSON file.
+  /// Saves a list of contacts (now List<Map<String, dynamic>>) to a local JSON file.
   /// Throws an error if saving fails.
-  Future<void> _saveContactsToFile(List<Map<String, String>> contacts) async {
+  Future<void> _saveContactsToFile(List<Map<String, dynamic>> contacts) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/$contactsFileName');
@@ -103,8 +162,8 @@ class WBPoliceScraperService {
   /// Scrapes all pages of contacts from the website.
   /// This method now handles fetching the initial page and its view state,
   /// then iteratively scrapes subsequent pages by simulating numerical page clicks.
-  Future<List<Map<String, String>>> _scrapeAllContacts() async {
-    List<Map<String, String>> allContacts = [];
+  Future<List<Map<String, dynamic>>> _scrapeAllContacts() async {
+    List<Map<String, dynamic>> allContacts = [];
     Map<String, String> currentHiddenFields = {};
     Document? currentDocument;
     int currentPage = 1;
@@ -238,64 +297,10 @@ class WBPoliceScraperService {
     return allContacts;
   }
 
-  /// Helper to fetch a specific page's HTML and its hidden form fields via POST.
-  /// Returns a map containing 'htmlBody' and 'hiddenFields', or null on failure.
-  /// This method now takes dynamic eventTarget and eventArgument for pagination.
-  Future<Map<String, dynamic>?> _fetchPageHtmlAndFields(
-    String eventTarget,
-    String eventArgument,
-    Map<String, String> previousHiddenFields,
-    String refererUrl, // Added refererUrl parameter
-  ) async {
-    print(
-      'Posting to get page with eventTarget: "$eventTarget", eventArgument: "$eventArgument" and hidden fields...',
-    );
-    try {
-      final Map<String, String> postBody = Map.from(previousHiddenFields);
-      postBody['__EVENTTARGET'] = eventTarget;
-      postBody['__EVENTARGUMENT'] = eventArgument;
-
-      // Merge default headers with referer specific to this request
-      final Map<String, String> headers = {
-        ...defaultHeaders,
-        'Referer': refererUrl, // Set the Referer header
-        'Content-Type':
-            'application/x-www-form-urlencoded; charset=UTF-8', // Explicitly add charset
-        // IMPORTANT: Removed X-MicrosoftAjax header as browser does not send it.
-        // This likely caused the server to send an AJAX delta, which we don't expect.
-      };
-
-      // Add the session cookie if available
-      if (_sessionCookie != null) {
-        headers['Cookie'] = _sessionCookie!;
-      }
-
-      final response = await http.post(
-        Uri.parse(baseUrl),
-        body: postBody,
-        headers: headers,
-      );
-
-      print('POST response status: ${response.statusCode}');
-      if (response.statusCode == 200) {
-        return {
-          'htmlBody': response.body,
-          'hiddenFields':
-              <
-                String,
-                String
-              >{}, // Not used directly for full HTML response, but kept for consistency
-        };
-      }
-    } catch (e) {
-      print('Error fetching page via POST: $e');
-    }
-    return null;
-  }
-
   /// Parses and extracts contacts from a given HTML Document.
-  List<Map<String, String>> _parseContactsFromPage(Document document) {
-    List<Map<String, String>> contacts = [];
+  /// Returns List<Map<String, dynamic>> now, with 'isScammer' defaulted to false.
+  List<Map<String, dynamic>> _parseContactsFromPage(Document document) {
+    List<Map<String, dynamic>> contacts = [];
     // Selector for the main contact table, based on the provided ID snippets
     final table = document.querySelector(
       "#ctl00_ContentPlaceHolder1_grid_contactus",
@@ -326,9 +331,9 @@ class WBPoliceScraperService {
           if (name.isNotEmpty || phone.isNotEmpty) {
             contacts.add({
               'name': name,
-              // 'designation' is derived from 'name' since it's not a separate column in the screenshot.
               'designation': designation,
               'phone': phone,
+              'isScammer': false, // Default to false for scraped contacts
             });
           } else {
             print(
@@ -372,10 +377,61 @@ class WBPoliceScraperService {
     return hiddenFields;
   }
 
-  /// Parses an ASP.NET AJAX Delta response string.
-  /// This method is no longer actively used in the main scraping flow
-  /// because the browser's behavior indicates a full HTML response is expected.
-  /// Keeping it for reference/potential future use if behavior changes.
+  /// Helper to fetch a specific page's HTML and its hidden form fields via POST.
+  /// Returns a map containing 'htmlBody' and 'hiddenFields', or null on failure.
+  /// This method now takes dynamic eventTarget and eventArgument for pagination.
+  Future<Map<String, dynamic>?> _fetchPageHtmlAndFields(
+    String eventTarget,
+    String eventArgument,
+    Map<String, String> previousHiddenFields,
+    String refererUrl, // Added refererUrl parameter
+  ) async {
+    print(
+      'Posting to get page with eventTarget: "$eventTarget", eventArgument: "$eventArgument" and hidden fields...',
+    );
+    try {
+      final Map<String, String> postBody = Map.from(previousHiddenFields);
+      postBody['__EVENTTARGET'] = eventTarget;
+      postBody['__EVENTARGUMENT'] = eventArgument;
+
+      // Merge default headers with referer specific to this request
+      final Map<String, String> headers = {
+        ...defaultHeaders,
+        'Referer': refererUrl, // Set the Referer header
+        'Content-Type':
+            'application/x-www-form-urlencoded; charset=UTF-8', // Explicitly add charset
+      };
+
+      // Add the session cookie if available
+      if (_sessionCookie != null) {
+        headers['Cookie'] = _sessionCookie!;
+      }
+
+      final response = await http.post(
+        Uri.parse(baseUrl),
+        body: postBody,
+        headers: headers,
+      );
+
+      print('POST response status: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        return {
+          'htmlBody': response.body,
+          'hiddenFields':
+              <
+                String,
+                String
+              >{}, // Not used directly for full HTML response, but kept for consistency
+        };
+      }
+    } catch (e) {
+      print('Error fetching page via POST: $e');
+    }
+    return null;
+  }
+
+  // This method is no longer actively used in the main scraping flow.
+  // Keeping it for reference/potential future use if behavior changes.
   Map<String, dynamic> _parseAjaxDeltaResponse(String deltaResponse) {
     print(
       'NOTE: _parseAjaxDeltaResponse is not used in the primary scraping flow.',
