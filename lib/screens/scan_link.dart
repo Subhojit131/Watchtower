@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:app_links/app_links.dart';
 import 'dart:async';
 import '../services/url_checker_service.dart';
+import 'sandbox_webview.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 import 'package:android_intent_plus/android_intent.dart';
 
@@ -84,12 +86,12 @@ class _ScanLinkPageState extends State<ScanLinkPage> {
 
   void scanLink() async {
     String url = _urlController.text.trim();
+
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = 'https://$url';
     }
 
-    if (url.isEmpty || url == lastScannedUrl) return; // Prevent duplicate scan
-
+    if (url.isEmpty || url == lastScannedUrl) return;
     lastScannedUrl = url;
 
     setState(() {
@@ -98,13 +100,26 @@ class _ScanLinkPageState extends State<ScanLinkPage> {
 
     try {
       final isUnsafe = await UrlCheckerService.checkWithGoogleSafeBrowsing(url);
-      setState(() {
-        result = isUnsafe ? "⚠️ Unsafe Link Detected!" : "✅ Link Looks Safe.";
-        isSafe = !isUnsafe;
-      });
 
-      //Optional Chrome redirection
-      if (!isUnsafe) {
+      if (isUnsafe) {
+        setState(() {
+          result = "⚠️ Unsafe Link Detected! Opening in sandbox...";
+          isSafe = false;
+        });
+
+        await Future.delayed(const Duration(seconds: 1));
+
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => SandboxWebViewPage(url: url)),
+        );
+      } else {
+        setState(() {
+          result = "✅ Link Looks Safe. Opening in Chrome...";
+          isSafe = true;
+        });
+
         await Future.delayed(const Duration(seconds: 1));
         await openInChrome(url);
       }
